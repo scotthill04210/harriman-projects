@@ -12,14 +12,7 @@ defined( 'ABSPATH' ) || exit;
 class Save {
 
 	/**
-	 * Skip the legacy snapshot while a delete is clearing content.
-	 *
-	 * @var bool
-	 */
-	public static $skip_snapshot = false;
-
-	/**
-	 * Set by a future importer so a post save does not archive legacy content.
+	 * The importer sets this around apply. Field saves still require the meta box nonce.
 	 *
 	 * @var bool
 	 */
@@ -29,108 +22,7 @@ class Save {
 	 * Hooks.
 	 */
 	public static function register() {
-		add_action( 'save_post_' . WW_POST_TYPE, array( __CLASS__, 'snapshot_on_save' ), 5, 2 );
 		add_action( 'save_post_' . WW_POST_TYPE, array( __CLASS__, 'save' ), 10, 2 );
-		add_action( 'added_post_meta', array( __CLASS__, 'maybe_snapshot' ), 10, 4 );
-		add_action( 'updated_post_meta', array( __CLASS__, 'maybe_snapshot' ), 10, 4 );
-		add_filter( 'update_post_metadata', array( __CLASS__, 'keep_flag_after_delete' ), 10, 4 );
-		add_filter( 'delete_post_metadata', array( __CLASS__, 'keep_flag_after_delete' ), 10, 3 );
-	}
-
-	/**
-	 * Archive post_content the first time the flag is stored.
-	 *
-	 * Switching never rewrites post_content. This is a copy.
-	 *
-	 * @param int    $meta_id    Meta row ID.
-	 * @param int    $object_id  Post ID.
-	 * @param string $meta_key   Meta key.
-	 * @param mixed  $meta_value New value.
-	 */
-	public static function maybe_snapshot( $meta_id, $object_id, $meta_key, $meta_value ) {
-		unset( $meta_id );
-		if ( '_ww_use_new_template' !== $meta_key || self::$skip_snapshot || self::$importing ) {
-			return;
-		}
-		if ( ! ww_flag_is_on( $meta_value ) ) {
-			return;
-		}
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
-			return;
-		}
-		$object_id = (int) $object_id;
-		if ( wp_is_post_revision( $object_id ) || wp_is_post_autosave( $object_id ) ) {
-			return;
-		}
-		if ( WW_POST_TYPE !== get_post_type( $object_id ) ) {
-			return;
-		}
-		if ( get_post_meta( $object_id, '_ww_legacy_deleted', true ) ) {
-			return;
-		}
-		// First successful switch only. Revert leaves the archive in place.
-		if ( metadata_exists( 'post', $object_id, '_ww_legacy_content' ) ) {
-			return;
-		}
-		$post = get_post( $object_id );
-		if ( ! $post instanceof \WP_Post ) {
-			return;
-		}
-		update_post_meta( $object_id, '_ww_legacy_content', $post->post_content );
-	}
-
-	/**
-	 * Copy post_content the first time a project is saved in new-template mode.
-	 *
-	 * @param int      $post_id Post ID.
-	 * @param \WP_Post $post    Post object.
-	 */
-	public static function snapshot_on_save( $post_id, $post ) {
-		if ( self::$skip_snapshot || self::$importing ) {
-			return;
-		}
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
-			return;
-		}
-		if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
-			return;
-		}
-		if ( ! $post instanceof \WP_Post || WW_POST_TYPE !== $post->post_type ) {
-			return;
-		}
-		if ( ! ww_uses_new_template( $post_id ) ) {
-			return;
-		}
-		if ( get_post_meta( $post_id, '_ww_legacy_deleted', true ) ) {
-			return;
-		}
-		if ( metadata_exists( 'post', $post_id, '_ww_legacy_content' ) ) {
-			return;
-		}
-		update_post_meta( $post_id, '_ww_legacy_content', $post->post_content );
-	}
-
-	/**
-	 * After old data is deleted, the flag cannot be turned off.
-	 *
-	 * @param null|bool $check      Short-circuit value.
-	 * @param int       $object_id  Post ID.
-	 * @param string    $meta_key   Meta key.
-	 * @param mixed     $meta_value New value. Absent on delete.
-	 * @return null|bool
-	 */
-	public static function keep_flag_after_delete( $check, $object_id, $meta_key, $meta_value = null ) {
-		if ( null !== $check || '_ww_use_new_template' !== $meta_key ) {
-			return $check;
-		}
-		if ( ! get_post_meta( $object_id, '_ww_legacy_deleted', true ) ) {
-			return $check;
-		}
-		$turning_off = ( 4 > func_num_args() ) || ! ww_flag_is_on( $meta_value );
-		if ( $turning_off ) {
-			return true;
-		}
-		return $check;
 	}
 
 	/**
@@ -151,9 +43,6 @@ class Save {
 			return;
 		}
 		if ( ! current_user_can( 'edit_others_posts' ) || ! current_user_can( 'edit_post', $post_id ) ) {
-			return;
-		}
-		if ( ! ww_uses_new_template( $post_id ) ) {
 			return;
 		}
 
@@ -193,9 +82,6 @@ class Save {
 	public static function save_template_fields( $post_id, $template, array $fields ) {
 		$post_id  = (int) $post_id;
 		$template = (int) $template;
-		if ( ! ww_uses_new_template( $post_id ) ) {
-			return;
-		}
 		if ( ! in_array( $template, Fields::template_ids(), true ) ) {
 			return;
 		}

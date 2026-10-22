@@ -131,7 +131,7 @@ class MetaBoxes {
 			<div class="ww-block__body">
 				<?php
 				if ( 'title' === $block ) {
-					echo '<p>' . esc_html__( 'This is the project title at the top of the editor.', 'ww-projects' ) . '</p>';
+					self::title_field( $template, ! $active );
 				} elseif ( 'hero' === $block || 'single_image' === $block ) {
 					$image = get_post_meta( $post_id, '_ww_' . $block, true );
 					self::image_fields( 'ww[' . $block . ']', is_array( $image ) ? $image : array(), false, ! $active );
@@ -160,6 +160,23 @@ class MetaBoxes {
 				?>
 			</div>
 		</details>
+		<?php
+	}
+
+	/**
+	 * The post title. Not a meta field: the browser writes it through the editor store.
+	 *
+	 * @param int  $template Template number.
+	 * @param bool $disabled Disabled when this template is not the active one.
+	 */
+	private static function title_field( $template, $disabled ) {
+		$id = 'ww-project-title-' . (int) $template;
+		?>
+		<div class="ww-title-field">
+			<label for="<?php echo esc_attr( $id ); ?>"><?php esc_html_e( 'Headline / Project Name', 'ww-projects' ); ?></label>
+			<input type="text" id="<?php echo esc_attr( $id ); ?>" class="ww-project-title widefat" placeholder="<?php esc_attr_e( 'Project name', 'ww-projects' ); ?>" autocomplete="off" aria-required="true" <?php disabled( $disabled ); ?> />
+			<p class="ww-title-error" id="<?php echo esc_attr( $id ); ?>-error" hidden><?php esc_html_e( 'A project name is required', 'ww-projects' ); ?></p>
+		</div>
 		<?php
 	}
 
@@ -337,18 +354,14 @@ class MetaBoxes {
 	}
 
 	/**
-	 * Hide the native taxonomy boxes on a flagged project.
+	 * The forms edit markets, services, and locations, so the native boxes stay hidden.
 	 *
-	 * Other post types, and projects that are not flagged, keep their panels.
-	 *
-	 * @param string           $post_type Post type.
-	 * @param \WP_Post|null    $post      Current post.
+	 * @param string        $post_type Post type.
+	 * @param \WP_Post|null $post      Current post.
 	 */
 	public static function hide_native_taxonomies( $post_type, $post = null ) {
-		if ( WW_POST_TYPE !== $post_type || ! $post instanceof \WP_Post ) {
-			return;
-		}
-		if ( ! ww_uses_new_template( $post->ID ) ) {
+		unset( $post );
+		if ( WW_POST_TYPE !== $post_type ) {
 			return;
 		}
 		foreach ( array( 'market', 'service', 'project-location' ) as $taxonomy ) {

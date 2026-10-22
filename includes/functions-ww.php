@@ -18,31 +18,26 @@ function ww_flag_is_on( $value ) {
 }
 
 /**
- * Whether this project uses the new templates.
+ * Whether this project renders a new template.
  *
- * A missing flag counts as on. An explicit false is a revert.
+ * A valid stored template number is enough. Anything else keeps the theme layout.
  *
  * @param int $post_id Post ID. Defaults to the current post.
  * @return bool
  */
 function ww_uses_new_template( $post_id = 0 ) {
-	$post_id = $post_id ? (int) $post_id : (int) get_the_ID();
-	if ( WW_POST_TYPE !== get_post_type( $post_id ) ) {
-		return false;
-	}
-	return ww_flag_is_on( get_post_meta( $post_id, '_ww_use_new_template', true ) );
+	return (bool) ww_active_template( $post_id );
 }
 
 /**
- * Active template number, or 0 when this project still uses the current layout
- * or no card has been chosen.
+ * Active template number, or 0 when no valid template is stored.
  *
  * @param int $post_id Post ID. Defaults to the current post.
  * @return int
  */
 function ww_active_template( $post_id = 0 ) {
 	$post_id = $post_id ? (int) $post_id : (int) get_the_ID();
-	if ( ! ww_uses_new_template( $post_id ) ) {
+	if ( WW_POST_TYPE !== get_post_type( $post_id ) ) {
 		return 0;
 	}
 	$template = (int) get_post_meta( $post_id, '_ww_template', true );

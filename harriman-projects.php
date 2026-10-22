@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name:       Harriman Projects
- * Description:       Per-project templates for the project post type. Flagged projects keep the current layout until an editor switches them.
- * Version:           1.2.1
+ * Description:       Per-project templates for the project post type. A project with a saved template uses that layout; every other project keeps the theme layout.
+ * Version:           1.2.4
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Warp+Weft
@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WW_VERSION', '1.2.1' );
+define( 'WW_VERSION', '1.2.4' );
 define( 'WW_PLUGIN_FILE', __FILE__ );
 define( 'WW_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WW_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -30,7 +30,6 @@ require_once WW_PLUGIN_DIR . 'includes/class-ww-updater.php';
 require_once WW_PLUGIN_DIR . 'includes/class-ww-meta-boxes.php';
 require_once WW_PLUGIN_DIR . 'includes/class-ww-save.php';
 require_once WW_PLUGIN_DIR . 'includes/class-ww-switch.php';
-require_once WW_PLUGIN_DIR . 'includes/class-ww-rest.php';
 require_once WW_PLUGIN_DIR . 'includes/class-ww-render.php';
 require_once WW_PLUGIN_DIR . 'includes/functions-ww.php';
 if ( ! defined( 'WW_ENABLE_IMPORTER' ) || WW_ENABLE_IMPORTER ) {

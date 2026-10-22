@@ -1,8 +1,8 @@
 # Harriman Projects
 
-Per-project templates for the existing `project` post type. A project stays on the current layout until an editor turns on `_ww_use_new_template` for that post.
+Per-project templates for the existing `project` post type. A project renders a new template when `_ww_template` is `1`, `2`, or `3`. Every other project keeps the theme layout.
 
-The theme renders its Blade layout inside `template_include` at the highest priority, and `content-single-project.blade.php` prints only `the_content()`. This plugin replaces `the_content` for a flagged single project. The header, footer, and `/projects/` archive are unchanged. `single.blade.php` and `layouts/app.blade.php` do not print a title or hero.
+The theme renders its Blade layout inside `template_include` at the highest priority, and `content-single-project.blade.php` prints only `the_content()`. This plugin replaces `the_content` for a single project that has a saved template. The header, footer, and `/projects/` archive are unchanged. `single.blade.php` and `layouts/app.blade.php` do not print a title or hero.
 
 ## Hooks
 
@@ -42,9 +42,9 @@ Slots: `title`, `subhead`, `location`, `stat`, `overview`.
 
 ## Updates
 
-Version 1.2.1. A project page uses the theme page header for the breadcrumb and title, so the spacing matches `/projects/`. The hero still overlaps the gray band. Spaces around each breadcrumb `›` are wider, and words in the project title keep their normal spacing. Images use the full attachment size again. Chips and links inside the template are not underlined. The breadcrumb links stay underlined. In the editor, only the selected template's panel is visible.
+Version 1.2.4. A saved template number is what turns a project onto the new layout. The editor no longer has a Project template sidebar panel. Old stored content is left in place until someone clears it by hand: `post_content`, `_ww_legacy_content`, `_ww_legacy_deleted`, `_ww_use_new_template`, and `_ww_import_prev`. The Headline / Project Name block edits the post title. It is the only required field, and an existing project's permalink stays put. Image previews in the editor keep a gap before Select and Remove. A project page uses the theme page header for the breadcrumb and title, so the spacing matches `/projects/`. The hero still overlaps the gray band. Spaces around each breadcrumb `›` are wider, and words in the project title keep their normal spacing. Images use the full attachment size again. Chips and links inside the template are not underlined. The breadcrumb links stay underlined. In the editor, only the selected template's panel is visible, and the block canvas stays hidden.
 
-WordPress installs newer versions from [GitHub releases](https://github.com/scotthill04210/harriman-projects/releases). On the Plugins screen, **Check for updates** looks immediately. Publish the next version as a release tag such as `v1.2.2`.
+WordPress installs newer versions from [GitHub releases](https://github.com/scotthill04210/harriman-projects/releases). On the Plugins screen, **Check for updates** looks immediately. Publish the next version as a release tag such as `v1.2.5`.
 
 ## Remove importer
 
@@ -55,12 +55,8 @@ After launch, remove the importer in one step:
 
 Leave stored meta alone: `_ww_slickplan_page_id`, `_ww_import_prev`, and `_ww_import_created`. The mapping file and the XML live outside the web root in `ww-private`, next to the project backups. They are not part of the plugin. To turn the importer off without deleting it, define `WW_ENABLE_IMPORTER` as false before the plugin loads.
 
-## REST
-
-`POST /wp-json/ww/v1/projects/{id}/delete-legacy`
-
-Requires a logged-in user with `edit_others_posts`, the `wp_rest` nonce, and `_ww_use_new_template` already saved. It deletes `_ww_legacy_content` and blanks that post's `post_content`. It does not change market, service, or project-location terms, the featured image, testimonial posts, or reusable blocks.
-
 ## Meta
 
-`_ww_use_new_template` turns the new template on for one project. `_ww_template` is `1`, `2`, or `3`. Field values use the `_ww_` keys in `includes/class-ww-fields.php`. Switching templates does not delete stored keys the new template does not show.
+`_ww_template` is `1`, `2`, or `3` and chooses the layout. Field values use the `_ww_` keys in `includes/class-ww-fields.php`. Switching templates does not delete stored keys the new template does not show.
+
+Older values stay in the database until they are cleared by hand: `post_content`, `_ww_legacy_content`, `_ww_legacy_deleted`, `_ww_use_new_template`, and `_ww_import_prev`. The plugin no longer reads the on/off flag to decide the layout, and it does not write or delete those values. The importer still reads `_ww_use_new_template` only so a project that was explicitly turned off stays unchecked in a dry run.

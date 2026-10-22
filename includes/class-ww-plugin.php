@@ -27,7 +27,6 @@ class Plugin {
 		Switcher::register();
 		MetaBoxes::register();
 		Save::register();
-		Rest::register();
 		Render::register();
 	}
 

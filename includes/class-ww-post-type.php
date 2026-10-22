@@ -63,7 +63,7 @@ class PostType {
 				'hierarchical'          => false,
 				'show_ui'               => true,
 				'show_in_nav_menus'     => true,
-				'supports'              => array( 'title', 'editor', 'thumbnail', 'custom-fields' ),
+				'supports'              => array( 'title', 'editor', 'thumbnail' ),
 				'has_archive'           => true,
 				'rewrite'               => array(
 					'slug'       => 'projects',

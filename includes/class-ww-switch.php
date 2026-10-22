@@ -1,6 +1,6 @@
 <?php
 /**
- * Editor sidebar switch, meta registration, and admin assets.
+ * Meta registration and admin assets.
  *
  * @package WW\HarrimanProjects
  */
@@ -17,7 +17,6 @@ class Switcher {
 	public static function register() {
 		// Called from init priority 11. A new init callback would miss this request.
 		self::register_meta();
-		add_action( 'rest_api_init', array( __CLASS__, 'register_rest_field' ) );
 		add_action( 'enqueue_block_editor_assets', array( __CLASS__, 'enqueue_editor' ) );
 		add_action( 'enqueue_block_assets', array( __CLASS__, 'enqueue_editor_frame' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin' ) );
@@ -25,34 +24,10 @@ class Switcher {
 	}
 
 	/**
-	 * Meta the block editor is allowed to change.
+	 * Import bookkeeping. Not exposed to the block editor.
 	 */
 	public static function register_meta() {
 		$auth = array( __CLASS__, 'auth_callback' );
-		register_post_meta(
-			WW_POST_TYPE,
-			'_ww_use_new_template',
-			array(
-				'type'              => 'boolean',
-				'single'            => true,
-				'show_in_rest'      => true,
-				'auth_callback'     => $auth,
-				'sanitize_callback' => 'rest_sanitize_boolean',
-				'default'           => true,
-			)
-		);
-		register_post_meta(
-			WW_POST_TYPE,
-			'_ww_legacy_deleted',
-			array(
-				'type'              => 'boolean',
-				'single'            => true,
-				'show_in_rest'      => true,
-				'auth_callback'     => $auth,
-				'sanitize_callback' => 'rest_sanitize_boolean',
-				'default'           => false,
-			)
-		);
 		register_post_meta(
 			WW_POST_TYPE,
 			'_ww_slickplan_page_id',
@@ -86,32 +61,6 @@ class Switcher {
 				'show_in_rest'      => false,
 				'sanitize_callback' => 'sanitize_text_field',
 				'auth_callback'     => $auth,
-			)
-		);
-	}
-
-	/**
-	 * Tell the editor whether a legacy snapshot exists, without sending the snapshot.
-	 */
-	public static function register_rest_field() {
-		register_rest_field(
-			WW_POST_TYPE,
-			'ww_legacy_archived',
-			array(
-				'get_callback' => static function ( $post ) {
-					$post_id = isset( $post['id'] ) ? (int) $post['id'] : 0;
-					if ( $post_id <= 0 ) {
-						return false;
-					}
-					$snapshot = get_post_meta( $post_id, '_ww_legacy_content', true );
-					return is_string( $snapshot ) && '' !== $snapshot;
-				},
-				'schema'       => array(
-					'description' => __( 'Whether this project has an archived legacy layout.', 'ww-projects' ),
-					'type'        => 'boolean',
-					'context'     => array( 'view', 'edit' ),
-					'readonly'    => true,
-				),
 			)
 		);
 	}
@@ -152,7 +101,7 @@ class Switcher {
 	}
 
 	/**
-	 * Document sidebar script. Loaded for the block editor only.
+	 * Admin styles for the block editor parent document.
 	 */
 	public static function enqueue_editor() {
 		if ( ! self::is_project_editor() ) {
@@ -163,13 +112,6 @@ class Switcher {
 			WW_PLUGIN_URL . 'assets/css/ww-admin.css',
 			array(),
 			WW_VERSION
-		);
-		wp_enqueue_script(
-			'ww-switch-panel',
-			WW_PLUGIN_URL . 'assets/js/ww-switch-panel.js',
-			array( 'wp-plugins', 'wp-edit-post', 'wp-editor', 'wp-element', 'wp-components', 'wp-data', 'wp-api-fetch', 'wp-i18n' ),
-			WW_VERSION,
-			true
 		);
 	}
 
@@ -194,7 +136,7 @@ class Switcher {
 		wp_enqueue_script(
 			'ww-admin',
 			WW_PLUGIN_URL . 'assets/js/ww-admin.js',
-			array( 'jquery', 'jquery-ui-sortable', 'wp-api-fetch', 'wp-i18n', 'media-editor', 'editor' ),
+			array( 'jquery', 'jquery-ui-sortable', 'wp-data', 'wp-api-fetch', 'wp-i18n', 'media-editor', 'editor' ),
 			WW_VERSION,
 			true
 		);
@@ -225,7 +167,7 @@ class Switcher {
 	}
 
 	/**
-	 * Hide the block canvas on load when this post is already flagged.
+	 * The forms are the editing UI, so the block canvas stays hidden.
 	 *
 	 * @param string $classes Space-separated admin body classes.
 	 * @return string
@@ -234,12 +176,7 @@ class Switcher {
 		if ( ! self::is_project_editor() ) {
 			return $classes;
 		}
-		$post_id = isset( $_GET['post'] ) ? absint( wp_unslash( $_GET['post'] ) ) : 0;
-		$flagged = ! $post_id || ww_flag_is_on( get_post_meta( $post_id, '_ww_use_new_template', true ) );
-		if ( $flagged ) {
-			$classes .= ' ww-flagged ww-hide-legacy-canvas';
-		}
-		return $classes;
+		return $classes . ' ww-flagged ww-hide-legacy-canvas';
 	}
 
 	/**
