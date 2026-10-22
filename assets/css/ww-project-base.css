@@ -208,9 +208,17 @@ body.ww-project .ww-project__terms li {
 	text-align: center;
 }
 
-body.ww-project .ww-project__terms a {
+body.ww-project .ww-project__terms a,
+body.ww-project .ww-project__terms a:hover,
+body.ww-project .ww-project__terms a:focus,
+body.ww-project .ww-project__terms a:visited {
 	color: inherit;
 	text-decoration: none;
+}
+
+body.ww-project .ww-project__terms a:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 2px;
 }
 
 body.ww-project .ww-project__description,

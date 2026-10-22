@@ -348,6 +348,27 @@
 		note.textContent = __('Saved data kept, but not shown on this template: %s.', 'ww-projects').replace('%s', names.join(', '));
 	}
 
+	function moveTerms(fromPanel, toPanel) {
+		if (!fromPanel || !toPanel || fromPanel === toPanel) {
+			return;
+		}
+		['location', 'markets_services'].forEach(function (name) {
+			var fromBody = fromPanel.querySelector('[data-block="' + name + '"] .ww-block__body');
+			var toBody = toPanel.querySelector('[data-block="' + name + '"] .ww-block__body');
+			if (!fromBody || !toBody) {
+				return;
+			}
+			var help = toBody.querySelector('.ww-block__help');
+			Array.prototype.slice.call(fromBody.querySelectorAll(':scope > .ww-terms')).forEach(function (node) {
+				if (help) {
+					toBody.insertBefore(node, help);
+				} else {
+					toBody.appendChild(node);
+				}
+			});
+		});
+	}
+
 	function activate(template, previous) {
 		var next = panel(template);
 		var prev = previous ? panel(previous) : null;
@@ -356,6 +377,7 @@
 			releaseEditors(prev);
 			syncScalars(prev, next);
 			syncRepeaters(prev, next);
+			moveTerms(prev, next);
 		}
 		document.querySelectorAll('.ww-template-panel').forEach(function (node) {
 			setPanelState(node, node.getAttribute('data-template') === String(template));

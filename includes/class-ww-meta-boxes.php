@@ -53,13 +53,27 @@ class MetaBoxes {
 		wp_nonce_field( 'ww_save_fields', 'ww_fields_nonce' );
 		$current = (int) get_post_meta( $post->ID, '_ww_template', true );
 		$images  = ww_template_card_images();
+		$preview = array(
+			1 => array( 144, 486 ),
+			2 => array( 144, 630 ),
+			3 => array( 144, 504 ),
+		);
 		?>
 		<div class="ww-editor" id="ww-project-editor">
 			<div class="ww-picker" role="radiogroup" aria-label="<?php esc_attr_e( 'Project Template', 'ww-projects' ); ?>">
 				<?php foreach ( Fields::template_ids() as $template ) : ?>
+					<?php
+					$width  = isset( $preview[ $template ] ) ? $preview[ $template ][0] : 144;
+					$height = isset( $preview[ $template ] ) ? $preview[ $template ][1] : 486;
+					$alt    = sprintf(
+						/* translators: %d: template number. */
+						__( 'Template %d layout preview', 'ww-projects' ),
+						$template
+					);
+					?>
 					<label class="ww-picker__card">
 						<input type="radio" name="ww_template" value="<?php echo esc_attr( (string) $template ); ?>" <?php checked( $current, $template ); ?> />
-						<img src="<?php echo esc_url( $images[ $template ] ); ?>" alt="" width="320" height="180" />
+						<img src="<?php echo esc_url( $images[ $template ] ); ?>" alt="<?php echo esc_attr( $alt ); ?>" width="<?php echo esc_attr( (string) $width ); ?>" height="<?php echo esc_attr( (string) $height ); ?>" />
 						<span><?php echo esc_html( sprintf( /* translators: %d: template number. */ __( 'Template %d', 'ww-projects' ), $template ) ); ?></span>
 					</label>
 				<?php endforeach; ?>
@@ -86,6 +100,19 @@ class MetaBoxes {
 	}
 
 	/**
+	 * Location, markets, and services are rendered once and moved when the template changes.
+	 *
+	 * @param int $template Template number.
+	 * @param int $post_id  Post ID.
+	 * @return bool
+	 */
+	private static function shows_shared_terms( $template, $post_id ) {
+		$saved = (int) get_post_meta( $post_id, '_ww_template', true );
+		$owner = $saved >= 1 ? $saved : 1;
+		return (int) $template === $owner;
+	}
+
+	/**
 	 * One collapsible block.
 	 *
 	 * @param string $block  Block name.
@@ -96,7 +123,7 @@ class MetaBoxes {
 	private static function render_block( $block, $template, $post_id, $active ) {
 		$schema = Fields::block( $block, $template );
 		?>
-		<details class="ww-block" open>
+		<details class="ww-block" data-block="<?php echo esc_attr( $block ); ?>" open>
 			<summary>
 				<?php echo self::icon( $schema['icon'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG. ?>
 				<span class="ww-block__label"><?php echo esc_html( $schema['label'] ); ?></span>
@@ -109,13 +136,17 @@ class MetaBoxes {
 					$image = get_post_meta( $post_id, '_ww_' . $block, true );
 					self::image_fields( 'ww[' . $block . ']', is_array( $image ) ? $image : array(), false, ! $active );
 				} elseif ( 'location' === $block ) {
-					self::location_fields( $template, $post_id, ! $active );
+					if ( self::shows_shared_terms( $template, $post_id ) ) {
+						self::location_fields( $template, $post_id, ! $active );
+					}
 				} elseif ( 'subhead' === $block || 'stat' === $block || 'type' === $block || 'program' === $block ) {
 					self::text_field( $block, (string) get_post_meta( $post_id, '_ww_' . $block, true ), ! $active );
 				} elseif ( 'description' === $block || 'content_block' === $block ) {
 					self::rich_text_field( $block, $template, (string) get_post_meta( $post_id, '_ww_' . $block, true ), ! $active );
 				} elseif ( 'markets_services' === $block ) {
-					self::term_fields( $template, $post_id, ! $active );
+					if ( self::shows_shared_terms( $template, $post_id ) ) {
+						self::term_fields( $template, $post_id, ! $active );
+					}
 				} elseif ( 'slider' === $block || 'grid' === $block ) {
 					self::image_repeater( $block, $template, $post_id, ! $active );
 				} elseif ( 'overview' === $block ) {
