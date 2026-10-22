@@ -40,6 +40,10 @@ Slots: `title`, `subhead`, `location`, `stat`, `overview`.
 - `ww_related_projects_args` changes the related-projects query. `no_found_rows` and `fields` stay forced.
 - `ww_cta_text` and `ww_cta_url` change the closing button.
 
+## Updates
+
+WordPress installs newer versions from [GitHub releases](https://github.com/scotthill04210/harriman-projects/releases). On the Plugins screen, **Check for updates** looks immediately. Publish the next version as a release tag such as `v1.2.1`.
+
 ## Remove importer
 
 After launch, remove the importer in one step:

@@ -16,6 +16,8 @@ class Plugin {
 	 */
 	public static function boot() {
 		load_plugin_textdomain( WW_TEXT_DOMAIN, false, dirname( plugin_basename( WW_PLUGIN_FILE ) ) . '/languages' );
+		Updater::register();
+		add_filter( 'plugin_action_links_' . plugin_basename( WW_PLUGIN_FILE ), array( 'WW\\HarrimanProjects\\Updater', 'action_links' ) );
 
 		if ( ! post_type_exists( WW_POST_TYPE ) ) {
 			add_action( 'admin_notices', array( __CLASS__, 'missing_post_type_notice' ) );

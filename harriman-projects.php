@@ -6,6 +6,7 @@
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Warp+Weft
+ * Update URI:        https://github.com/scotthill04210/harriman-projects
  * Text Domain:       ww-projects
  *
  * @package WW\HarrimanProjects
@@ -25,6 +26,7 @@ define( 'WW_HARRIMAN_PROJECTS_ACTIVE', true );
 require_once WW_PLUGIN_DIR . 'includes/class-ww-fields.php';
 require_once WW_PLUGIN_DIR . 'includes/class-ww-post-type.php';
 require_once WW_PLUGIN_DIR . 'includes/class-ww-plugin.php';
+require_once WW_PLUGIN_DIR . 'includes/class-ww-updater.php';
 require_once WW_PLUGIN_DIR . 'includes/class-ww-meta-boxes.php';
 require_once WW_PLUGIN_DIR . 'includes/class-ww-save.php';
 require_once WW_PLUGIN_DIR . 'includes/class-ww-switch.php';
