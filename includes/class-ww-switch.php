@@ -199,7 +199,7 @@ class Switcher {
 			true
 		);
 
-		$post_id = isset( $_GET['post'] ) ? (int) $_GET['post'] : 0;
+		$post_id = isset( $_GET['post'] ) ? absint( wp_unslash( $_GET['post'] ) ) : 0;
 		$stored  = array();
 		if ( $post_id ) {
 			foreach ( Fields::all_meta_keys() as $key ) {
@@ -234,7 +234,7 @@ class Switcher {
 		if ( ! self::is_project_editor() ) {
 			return $classes;
 		}
-		$post_id = isset( $_GET['post'] ) ? (int) $_GET['post'] : 0;
+		$post_id = isset( $_GET['post'] ) ? absint( wp_unslash( $_GET['post'] ) ) : 0;
 		$flagged = ! $post_id || ww_flag_is_on( get_post_meta( $post_id, '_ww_use_new_template', true ) );
 		if ( $flagged ) {
 			$classes .= ' ww-flagged ww-hide-legacy-canvas';

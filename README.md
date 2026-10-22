@@ -8,7 +8,7 @@ The theme renders its Blade layout inside `template_include` at the highest prio
 
 ### `ww_template_card_images`
 
-Filters the three picker images. Return three URLs. Numeric keys `1`, `2`, and `3` match the templates. A plain list of three URLs is also accepted.
+Filters the three picker images. Return three URLs. Numeric keys `1`, `2`, and `3` match the templates. A plain list of three URLs is also accepted. The defaults are `assets/img/Template1.svg`, `Template2.svg`, and `Template3.svg`.
 
 ```php
 add_filter( 'ww_template_card_images', function ( $images ) {
@@ -31,6 +31,23 @@ add_filter( 'ww_heading_levels', function ( $levels ) {
 ```
 
 Slots: `title`, `subhead`, `location`, `stat`, `overview`.
+
+### Other filters
+
+- `ww_term_aliases` maps an imported label onto an existing term name.
+- `ww_title_abbreviations` expands short titles before they are compared.
+- `ww_image_alt_fallback` replaces the generated alt when an image has none.
+- `ww_related_projects_args` changes the related-projects query. `no_found_rows` and `fields` stay forced.
+- `ww_cta_text` and `ww_cta_url` change the closing button.
+
+## Remove importer
+
+After launch, remove the importer in one step:
+
+1. Delete the folder `includes/importer/` (Slickplan import, project backup, and `ww-slickplan-admin.js`).
+2. Delete the `require_once` for `includes/importer/load.php` in `harriman-projects.php`.
+
+Leave stored meta alone: `_ww_slickplan_page_id`, `_ww_import_prev`, and `_ww_import_created`. The mapping file and the XML live outside the web root in `ww-private`, next to the project backups. They are not part of the plugin. To turn the importer off without deleting it, define `WW_ENABLE_IMPORTER` as false before the plugin loads.
 
 ## REST
 

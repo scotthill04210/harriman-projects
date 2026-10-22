@@ -27,15 +27,153 @@ class Slickplan {
 	}
 
 	/**
+	 * Keep the private folder from being listed if it is ever exposed.
+	 */
+	public static function protect_private_dir() {
+		$dir = self::private_dir();
+		if ( ! wp_mkdir_p( $dir ) ) {
+			return;
+		}
+		$index = $dir . '/index.php';
+		if ( ! file_exists( $index ) ) {
+			file_put_contents( $index, "<?php\n// Silence is golden.\n" );
+		}
+		$deny = $dir . '/.htaccess';
+		if ( ! file_exists( $deny ) ) {
+			file_put_contents( $deny, "Require all denied\n" );
+		}
+	}
+
+	/**
+	 * Refuse external entities and network access while XML is parsed.
+	 */
+	/**
+	 * Real path of the one XML file this request is allowed to parse.
+	 *
+	 * @var string
+	 */
+	private static $xml_allow = '';
+
+	/**
+	 * Refuse DTDs and remote entities. The export file itself still loads.
+	 */
+	private static function block_external_entities() {
+		if ( ! function_exists( 'libxml_set_external_entity_loader' ) ) {
+			return;
+		}
+		$allow = self::$xml_allow;
+		libxml_set_external_entity_loader(
+			static function ( $public, $system, $context ) use ( $allow ) {
+				unset( $public );
+				if ( ! is_string( $system ) || '' === $system ) {
+					return $context;
+				}
+				$real = realpath( $system );
+				if ( $real && '' !== $allow && $real === $allow ) {
+					$handle = fopen( $real, 'rb' );
+					return $handle ? $handle : null;
+				}
+				return null;
+			}
+		);
+	}
+
+	/**
+	 * Download one allow-listed image to a temp file.
+	 *
+	 * @param string $url  Remote URL.
+	 * @param string $name File name.
+	 * @return string|\WP_Error Temp path.
+	 */
+	private static function download_allowed_image( $url, $name ) {
+		$url = (string) $url;
+		if ( ! wp_http_validate_url( $url ) ) {
+			return new \WP_Error( 'ww_image_url', __( 'That image URL is not allowed.', 'ww-projects' ) );
+		}
+		$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+		$allowed_hosts = array( 'harriman.com', 'www.harriman.com', 'warpweft.slickplan.com' );
+		if ( ! in_array( $host, $allowed_hosts, true ) || self::host_is_private( $host ) ) {
+			return new \WP_Error( 'ww_image_host', __( 'That image host is not allowed.', 'ww-projects' ) );
+		}
+		$limit = 12 * MB_IN_BYTES;
+		$head  = wp_safe_remote_head(
+			$url,
+			array(
+				'timeout'     => 15,
+				'redirection' => 2,
+			)
+		);
+		if ( ! is_wp_error( $head ) ) {
+			$length = (int) wp_remote_retrieve_header( $head, 'content-length' );
+			if ( $length > $limit ) {
+				return new \WP_Error( 'ww_image_size', __( 'That image is too large.', 'ww-projects' ) );
+			}
+		}
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		$tmp = wp_tempnam( $name ? $name : 'ww-image' );
+		if ( ! $tmp ) {
+			return new \WP_Error( 'ww_image_tmp', __( 'Could not store the image.', 'ww-projects' ) );
+		}
+		$response = wp_safe_remote_get(
+			$url,
+			array(
+				'timeout'     => 20,
+				'redirection' => 2,
+				'stream'      => true,
+				'filename'    => $tmp,
+			)
+		);
+		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+			wp_delete_file( $tmp );
+			$message = is_wp_error( $response ) ? $response->get_error_message() : __( 'The image could not be downloaded.', 'ww-projects' );
+			return new \WP_Error( 'ww_image_download', $message );
+		}
+		$size = filesize( $tmp );
+		if ( false === $size || $size > $limit ) {
+			wp_delete_file( $tmp );
+			return new \WP_Error( 'ww_image_size', __( 'That image is too large.', 'ww-projects' ) );
+		}
+		$check = wp_check_filetype_and_ext( $tmp, (string) $name );
+		$mime  = isset( $check['type'] ) ? (string) $check['type'] : '';
+		if ( ! in_array( $mime, array( 'image/jpeg', 'image/png', 'image/gif', 'image/webp' ), true ) ) {
+			wp_delete_file( $tmp );
+			return new \WP_Error( 'ww_image_type', __( 'That file is not an image.', 'ww-projects' ) );
+		}
+		return $tmp;
+	}
+
+	/**
+	 * True when the host resolves to a private or reserved address.
+	 *
+	 * @param string $host Hostname.
+	 * @return bool
+	 */
+	private static function host_is_private( $host ) {
+		$host = trim( $host, '[]' );
+		if ( filter_var( $host, FILTER_VALIDATE_IP ) ) {
+			return ! filter_var( $host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
+		}
+		$ips = gethostbynamel( $host );
+		if ( ! is_array( $ips ) || ! $ips ) {
+			return true;
+		}
+		foreach ( $ips as $ip ) {
+			if ( ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * XML files the admin may choose. Basename => absolute path.
 	 *
-	 * Private copies win over a file of the same name under docs.
+	 * Only the private import folder is readable. Docs is not used.
 	 *
 	 * @return array<string,string>
 	 */
 	public static function xml_files() {
 		$dirs = array(
-			WW_PLUGIN_DIR . 'docs',
 			self::private_dir(),
 		);
 		$files = array();
@@ -292,6 +430,8 @@ class Slickplan {
 	 */
 	public static function parse_file( $path ) {
 		$doc = new \DOMDocument();
+		self::$xml_allow = realpath( $path ) ?: '';
+		self::block_external_entities();
 		$ok  = $doc->load( $path, LIBXML_NONET | LIBXML_COMPACT );
 		if ( ! $ok ) {
 			return new \WP_Error( 'ww_xml', __( 'The XML file could not be read.', 'ww-projects' ) );
@@ -744,7 +884,7 @@ class Slickplan {
 	 */
 	private static function mapping_file() {
 		$map  = array();
-		$path = WW_PLUGIN_DIR . 'docs/ww_project_import_map.csv';
+		$path = trailingslashit( self::private_dir() ) . 'ww_project_import_map.csv';
 		if ( ! is_readable( $path ) ) {
 			return $map;
 		}
@@ -1186,14 +1326,9 @@ class Slickplan {
 		require_once ABSPATH . 'wp-admin/includes/media.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 		$name  = ! empty( $item['file_name'] ) ? $item['file_name'] : basename( (string) wp_parse_url( $url, PHP_URL_PATH ) );
-		$tmp   = null;
+		$tmp   = self::download_allowed_image( $url, $name );
 		$error = '';
-		for ( $attempt = 0; $attempt < 2; $attempt++ ) {
-			$tmp = download_url( $url, 20 );
-			if ( ! is_wp_error( $tmp ) ) {
-				$error = '';
-				break;
-			}
+		if ( is_wp_error( $tmp ) ) {
 			$error = $tmp->get_error_message();
 			$tmp   = null;
 		}
@@ -1421,7 +1556,7 @@ class Slickplan {
 	 * @return array
 	 */
 	private static function manifest_diff( array $parsed ) {
-		$path = WW_PLUGIN_DIR . 'docs/slickplan-projects-manifest.csv';
+		$path = trailingslashit( self::private_dir() ) . 'slickplan-projects-manifest.csv';
 		$diff = array();
 		if ( ! is_readable( $path ) ) {
 			return array( 'missing file' );
@@ -2102,6 +2237,7 @@ class Slickplan {
 	private static function load_html( $html ) {
 		$doc = new \DOMDocument();
 		$old = libxml_use_internal_errors( true );
+		self::block_external_entities();
 		$doc->loadHTML( '<?xml encoding="utf-8"><body>' . $html . '</body>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
 		libxml_clear_errors();
 		libxml_use_internal_errors( $old );

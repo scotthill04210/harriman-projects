@@ -27,8 +27,6 @@ class Plugin {
 		Save::register();
 		Rest::register();
 		Render::register();
-		Backup::register();
-		SlickplanAdmin::register();
 	}
 
 	/**

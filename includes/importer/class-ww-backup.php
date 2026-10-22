@@ -182,6 +182,7 @@ class Backup {
 			$path = $moved;
 		}
 
+		self::prune( dirname( $path ) );
 		update_option( 'ww_project_backup_file', $path, false );
 
 		return array(
@@ -215,10 +216,35 @@ class Backup {
 	}
 
 	/**
-	 * Prefer a directory outside the web root. Fall back to wp-content/ww-backups.
+	 * Keep the three newest backup files.
 	 *
-	 * @return string|\WP_Error
+	 * @param string $dir Directory.
 	 */
+	private static function prune( $dir ) {
+		$files = glob( trailingslashit( $dir ) . 'project-backup-*.json' );
+		if ( ! is_array( $files ) || count( $files ) <= 3 ) {
+			return;
+		}
+		usort(
+			$files,
+			static function ( $left, $right ) {
+				return filemtime( $right ) <=> filemtime( $left );
+			}
+		);
+		foreach ( array_slice( $files, 3 ) as $old ) {
+			wp_delete_file( $old );
+		}
+	}
+
+	/**
+	 * Directory outside the web root.
+	 *
+	 * @return string
+	 */
+	private static function outside_root() {
+		return dirname( ABSPATH ) . '/ww-private';
+	}
+
 	private static function directory() {
 		$candidates = array(
 			dirname( ABSPATH ) . '/ww-private',
@@ -226,6 +252,9 @@ class Backup {
 		);
 		foreach ( $candidates as $private ) {
 			if ( wp_mkdir_p( $private ) && is_writable( $private ) ) {
+				if ( $private === self::outside_root() ) {
+					Slickplan::protect_private_dir();
+				}
 				return $private;
 			}
 		}
@@ -236,6 +265,10 @@ class Backup {
 		$index = $dir . '/index.php';
 		if ( ! file_exists( $index ) ) {
 			file_put_contents( $index, "<?php\n// Silence is golden.\n" );
+		}
+		$deny = $dir . '/.htaccess';
+		if ( ! file_exists( $deny ) ) {
+			file_put_contents( $deny, "Require all denied\n" );
 		}
 		return $dir;
 	}

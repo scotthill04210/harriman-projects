@@ -49,7 +49,7 @@ class SlickplanAdmin {
 		}
 		wp_enqueue_script(
 			'ww-slickplan-admin',
-			WW_PLUGIN_URL . 'assets/js/ww-slickplan-admin.js',
+			WW_PLUGIN_URL . 'includes/importer/ww-slickplan-admin.js',
 			array(),
 			WW_VERSION,
 			true
@@ -80,7 +80,7 @@ class SlickplanAdmin {
 				$error = $uploaded->get_error_message();
 			} else {
 				$files    = Slickplan::xml_files();
-				$basename = '' !== $uploaded ? $uploaded : ( isset( $_POST['ww_xml'] ) ? wp_unslash( $_POST['ww_xml'] ) : '' );
+				$basename = '' !== $uploaded ? $uploaded : ( isset( $_POST['ww_xml'] ) ? sanitize_file_name( wp_unslash( $_POST['ww_xml'] ) ) : '' );
 				$path     = Slickplan::xml_path( $basename );
 				if ( is_wp_error( $path ) ) {
 					$error = $path->get_error_message();
@@ -403,15 +403,18 @@ class SlickplanAdmin {
 		if ( false === stripos( $head, '<sitemap' ) && false === stripos( $head, '<?xml' ) ) {
 			return new \WP_Error( 'ww_xml', __( 'That file is not a Slickplan XML export.', 'ww-projects' ) );
 		}
+		Slickplan::protect_private_dir();
 		$dir = Slickplan::private_dir();
-		if ( ! wp_mkdir_p( $dir ) ) {
+		if ( ! wp_mkdir_p( $dir ) || ! is_writable( $dir ) ) {
 			return new \WP_Error( 'ww_xml', __( 'The private import folder is not writable.', 'ww-projects' ) );
 		}
-		$dest = trailingslashit( $dir ) . $name;
+		$stored = 'slickplan-' . wp_generate_password( 16, false, false ) . '.xml';
+		$dest   = trailingslashit( $dir ) . $stored;
 		if ( ! @move_uploaded_file( $file['tmp_name'], $dest ) ) {
 			return new \WP_Error( 'ww_xml', __( 'The XML could not be stored outside the web root.', 'ww-projects' ) );
 		}
-		return $name;
+		chmod( $dest, 0640 );
+		return $stored;
 	}
 
 	/**
