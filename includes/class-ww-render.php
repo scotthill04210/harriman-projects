@@ -89,7 +89,7 @@ class Render {
 		if ( $template ) {
 			include WW_PLUGIN_DIR . 'templates/single-project.php';
 		} else {
-			echo '<h1 class="ww-project__title">' . esc_html( get_the_title( $post_id ) ) . '</h1>';
+			ww_render_header();
 			ww_render_terms();
 		}
 		$html = ob_get_clean();

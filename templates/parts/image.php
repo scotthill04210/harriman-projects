@@ -19,7 +19,15 @@ $ww_id      = (int) $ww_image['id'];
 $ww_caption = trim( (string) $ww_image['caption'] );
 $ww_role    = ( isset( $ww_image_role ) && 'hero' === $ww_image_role ) ? 'hero' : 'photo';
 $ww_alt     = ww_image_alt( $ww_image, $ww_role );
-$ww_img = ww_project_image_html( $ww_id, $ww_alt, $ww_role );
+$ww_img     = wp_get_attachment_image(
+	$ww_id,
+	'full',
+	false,
+	array(
+		'class' => 'ww-project__img',
+		'alt'   => $ww_alt,
+	)
+);
 if ( ! $ww_img ) {
 	return;
 }

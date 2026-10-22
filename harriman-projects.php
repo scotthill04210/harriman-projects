@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Harriman Projects
  * Description:       Per-project templates for the project post type. Flagged projects keep the current layout until an editor switches them.
- * Version:           1.2.0
+ * Version:           1.2.1
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            Warp+Weft
@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WW_VERSION', '1.2.0' );
+define( 'WW_VERSION', '1.2.1' );
 define( 'WW_PLUGIN_FILE', __FILE__ );
 define( 'WW_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WW_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

@@ -42,7 +42,9 @@ Slots: `title`, `subhead`, `location`, `stat`, `overview`.
 
 ## Updates
 
-WordPress installs newer versions from [GitHub releases](https://github.com/scotthill04210/harriman-projects/releases). On the Plugins screen, **Check for updates** looks immediately. Publish the next version as a release tag such as `v1.2.1`.
+Version 1.2.1. A project page uses the theme page header for the breadcrumb and title, so the spacing matches `/projects/`. The hero still overlaps the gray band. Spaces around each breadcrumb `›` are wider, and words in the project title keep their normal spacing. Images use the full attachment size again. Chips and links inside the template are not underlined. The breadcrumb links stay underlined. In the editor, only the selected template's panel is visible.
+
+WordPress installs newer versions from [GitHub releases](https://github.com/scotthill04210/harriman-projects/releases). On the Plugins screen, **Check for updates** looks immediately. Publish the next version as a release tag such as `v1.2.2`.
 
 ## Remove importer
 

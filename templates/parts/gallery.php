@@ -40,7 +40,15 @@ if ( 'slider' === $kind ) {
 			continue;
 		}
 		$alt = ww_image_alt( $ww_image, 'photo' );
-		$img = ww_project_image_html( (int) $ww_image['id'], $alt, 'photo', 'ww-project__img wp-block-anchour-slide__image' );
+		$img = wp_get_attachment_image(
+			(int) $ww_image['id'],
+			'full',
+			false,
+			array(
+				'class' => 'ww-project__img wp-block-anchour-slide__image',
+				'alt'   => $alt,
+			)
+		);
 		if ( ! $img ) {
 			continue;
 		}

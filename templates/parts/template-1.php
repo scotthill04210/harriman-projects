@@ -7,9 +7,10 @@
 
 defined( 'ABSPATH' ) || exit;
 ?>
+<?php ww_render_header(); ?>
 <article class="ww-project alignfull">
 	<?php
-	ww_render_header();
+	ww_render_hero_slot();
 	ww_render_intro();
 	ww_render_gallery( 'slider' );
 	ww_render_overview();

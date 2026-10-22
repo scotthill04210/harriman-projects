@@ -161,32 +161,6 @@ function ww_prime_project_media( $post_id ) {
 }
 
 /**
- * Front-end img tag with srcset. The hero is eager. Every other image is lazy.
- *
- * @param int    $attachment_id Attachment ID.
- * @param string $alt           Alt text.
- * @param string $role          hero or photo.
- * @param string $class         Extra class names.
- * @return string
- */
-function ww_project_image_html( $attachment_id, $alt, $role, $class = 'ww-project__img' ) {
-	$hero  = ( 'hero' === $role );
-	$attrs = array(
-		'class'    => $class,
-		'alt'      => $alt,
-		'decoding' => 'async',
-		'sizes'    => $hero ? '(min-width: 1512px) 1512px, 100vw' : '(max-width: 899px) 100vw, 720px',
-	);
-	if ( $hero ) {
-		$attrs['loading']       = 'eager';
-		$attrs['fetchpriority'] = 'high';
-	} else {
-		$attrs['loading'] = 'lazy';
-	}
-	return wp_get_attachment_image( (int) $attachment_id, 'large', false, $attrs );
-}
-
-/**
  * Strip tags and Word markup from a single-line field.
  *
  * @param string $value Raw text.
@@ -801,38 +775,42 @@ function ww_overview_row( $label, $value_html ) {
 }
 
 /**
- * Three crumbs: Harriman, Work, and the project title.
+ * Theme breadcrumb markup. Trail is Harriman, Work, then this title.
  */
 function ww_render_breadcrumb() {
-	echo '<nav class="ww-project__breadcrumb" aria-label="' . esc_attr__( 'Breadcrumb', 'ww-projects' ) . '">';
-	echo '<a href="' . esc_url( home_url( '/' ) ) . '">' . esc_html__( 'Harriman', 'ww-projects' ) . '</a>';
-	echo '<span class="ww-project__breadcrumb-sep" aria-hidden="true"> › </span>';
-	echo '<a href="' . esc_url( home_url( '/projects/' ) ) . '">' . esc_html__( 'Work', 'ww-projects' ) . '</a>';
-	echo '<span class="ww-project__breadcrumb-sep" aria-hidden="true"> › </span>';
-	echo '<span class="ww-project__breadcrumb-current">' . esc_html( get_the_title() ) . '</span>';
-	echo '</nav>';
+	echo '<div class="breadcrumbs">';
+	echo '<span><span><a href="' . esc_url( home_url( '/' ) ) . '">' . esc_html__( 'Harriman', 'ww-projects' ) . '</a></span>';
+	echo ' › <span><a href="' . esc_url( home_url( '/projects/' ) ) . '">' . esc_html__( 'Work', 'ww-projects' ) . '</a></span>';
+	echo ' › <span class="breadcrumb_last" aria-current="page">' . esc_html( get_the_title() ) . '</span></span>';
+	echo '</div>';
 }
 
 /**
- * Gray header band, plus the hero when one is set.
+ * Theme page header. A hero adds the class the overlap override uses.
  */
 function ww_render_header() {
-	$hero  = ww_image_meta( 'hero' );
-	$class = 'ww-project__header';
-	if ( $hero ) {
+	$class = 'wp-block-anchour-page-header page-header-simple-header has-warm-gray-300-background-color has-background ww-project__header';
+	if ( ww_image_meta( 'hero' ) ) {
 		$class .= ' ww-project__header--hero';
 	}
-	echo '<header class="' . esc_attr( $class ) . '">';
-	echo '<div class="ww-project__band">';
+	echo '<div class="' . esc_attr( $class ) . '">';
+	echo '<div class="wp-block-anchour-page-header__inner">';
+	echo '<div class="wp-block-anchour-page-header__content">';
 	ww_render_breadcrumb();
-	ww_render_title();
-	echo '</div>';
-	if ( $hero ) {
-		echo '<div class="ww-project__hero-wrap">';
-		ww_render_hero();
-		echo '</div>';
+	echo '<h1 class="pb-0">' . esc_html( get_the_title() ) . '</h1>';
+	echo '</div></div></div>';
+}
+
+/**
+ * Hero image, when the project has one. Follows the page header.
+ */
+function ww_render_hero_slot() {
+	if ( ! ww_image_meta( 'hero' ) ) {
+		return;
 	}
-	echo '</header>';
+	echo '<div class="ww-project__hero-wrap">';
+	ww_render_hero();
+	echo '</div>';
 }
 
 /**
@@ -1136,11 +1114,8 @@ function ww_related_card_html( $post_id ) {
 		'large',
 		false,
 		array(
-			'class'    => 'wp-post-image',
-			'alt'      => $alt,
-			'loading'  => 'lazy',
-			'decoding' => 'async',
-			'sizes'    => '(max-width: 899px) 100vw, 480px',
+			'class' => 'wp-post-image',
+			'alt'   => $alt,
 		)
 	);
 	if ( ! $img ) {

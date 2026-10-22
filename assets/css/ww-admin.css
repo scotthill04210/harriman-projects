@@ -84,6 +84,10 @@
 	gap: 16px;
 }
 
+#ww-project-template .ww-template-panel[hidden] {
+	display: none;
+}
+
 #ww-project-template .ww-block {
 	border: 1px solid #dcdcde;
 	border-radius: 4px;
