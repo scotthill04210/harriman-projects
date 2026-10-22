@@ -1,0 +1,39 @@
+/**
+ * Template 2 image grid. Three images use the Figma mosaic.
+ * One or two images keep the simple grid from the base file.
+ */
+
+@media (min-width: 900px) {
+	body.ww-template-2 .ww-project__gallery--figma {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		grid-template-rows: 450px 450px;
+	}
+
+	body.ww-template-2 .ww-project__gallery--figma .ww-project__gallery-item:nth-child(1) {
+		grid-column: 1 / span 2;
+		grid-row: 1 / span 2;
+	}
+}
+
+@media (max-width: 899px) {
+	body.ww-template-2 .ww-project__gallery--figma {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		grid-template-rows: 347px 173px;
+	}
+
+	body.ww-template-2 .ww-project__gallery--figma .ww-project__gallery-item:nth-child(1) {
+		grid-column: 1 / -1;
+	}
+}
+
+body.ww-template-2 .ww-project__gallery--figma .ww-project__gallery-item {
+	min-height: 0;
+	height: 100%;
+}
+
+body.ww-template-2 .ww-project__gallery--figma .ww-project__img {
+	width: 100%;
+	height: 100%;
+	aspect-ratio: auto;
+	object-fit: cover;
+}

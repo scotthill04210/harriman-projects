@@ -1,0 +1,152 @@
+<?php
+/**
+ * Front-end output for flagged projects.
+ *
+ * The theme renders Blade inside template_include at PHP_INT_MAX, so a plugin
+ * template path never reaches WordPress. content-single-project.blade.php is
+ * only the_content(), and the layout prints no title or hero, so replacing
+ * the_content keeps the header and footer.
+ *
+ * @package WW\HarrimanProjects
+ */
+
+namespace WW\HarrimanProjects;
+
+defined( 'ABSPATH' ) || exit;
+
+class Render {
+
+	/**
+	 * Prevent the_content from calling itself while a template renders.
+	 *
+	 * @var bool
+	 */
+	private static $rendering = false;
+
+	/**
+	 * Hooks.
+	 */
+	public static function register() {
+		add_filter( 'the_content', array( __CLASS__, 'content' ), 99 );
+		add_filter( 'body_class', array( __CLASS__, 'body_class' ) );
+		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue' ), 20 );
+	}
+
+	/**
+	 * Replace the legacy block layout with the chosen template.
+	 *
+	 * @param string $content Original content.
+	 * @return string
+	 */
+	public static function content( $content ) {
+		if ( self::$rendering || is_admin() ) {
+			return $content;
+		}
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return $content;
+		}
+		if ( doing_filter( 'get_the_excerpt' ) || doing_filter( 'the_excerpt' ) ) {
+			return $content;
+		}
+		if ( ! is_singular( WW_POST_TYPE ) || ! in_the_loop() || ! is_main_query() ) {
+			return $content;
+		}
+		if ( post_password_required() ) {
+			return $content;
+		}
+		$post_id = get_the_ID();
+		if ( ! ww_uses_new_template( $post_id ) ) {
+			return $content;
+		}
+
+		$template = ww_active_template( $post_id );
+		self::$rendering = true;
+		ob_start();
+		if ( $template ) {
+			include WW_PLUGIN_DIR . 'templates/single-project.php';
+		} else {
+			echo '<h1 class="ww-project__title">' . esc_html( get_the_title( $post_id ) ) . '</h1>';
+			ww_render_terms();
+		}
+		$html = ob_get_clean();
+		self::$rendering = false;
+
+		return is_string( $html ) ? $html : '';
+	}
+
+	/**
+	 * Body classes for the active template only.
+	 *
+	 * @param string[] $classes Classes.
+	 * @return string[]
+	 */
+	public static function body_class( $classes ) {
+		if ( is_admin() || ! is_singular( WW_POST_TYPE ) ) {
+			return $classes;
+		}
+		if ( ! ww_uses_new_template( get_queried_object_id() ) ) {
+			return $classes;
+		}
+		$classes[] = 'ww-project';
+		$template  = ww_active_template( get_queried_object_id() );
+		if ( $template ) {
+			$classes[] = 'ww-template-' . $template;
+		}
+		return $classes;
+	}
+
+	/**
+	 * Base styles plus the one template's stylesheet and script.
+	 *
+	 * Front end only. Runs after the theme registers its stylesheet.
+	 */
+	public static function enqueue() {
+		if ( is_admin() || ! is_singular( WW_POST_TYPE ) || ! ww_uses_new_template( get_queried_object_id() ) ) {
+			return;
+		}
+		$template = ww_active_template( get_queried_object_id() );
+		wp_enqueue_style(
+			'ww-project-base',
+			WW_PLUGIN_URL . 'assets/css/ww-project-base.css',
+			self::theme_style_deps(),
+			self::asset_version( 'assets/css/ww-project-base.css' )
+		);
+		if ( ! $template ) {
+			return;
+		}
+		wp_enqueue_style(
+			'ww-template-' . $template,
+			WW_PLUGIN_URL . 'assets/css/ww-template-' . $template . '.css',
+			array( 'ww-project-base' ),
+			self::asset_version( 'assets/css/ww-template-' . $template . '.css' )
+		);
+		wp_enqueue_script(
+			'ww-template-' . $template,
+			WW_PLUGIN_URL . 'assets/js/ww-template-' . $template . '.js',
+			array(),
+			self::asset_version( 'assets/js/ww-template-' . $template . '.js' ),
+			true
+		);
+	}
+
+	/**
+	 * Theme stylesheet handle. Sage registers it as sage/main.css.
+	 *
+	 * @return string[]
+	 */
+	private static function theme_style_deps() {
+		return array( 'sage/main.css' );
+	}
+
+	/**
+	 * filemtime query arg so a deploy busts the host and browser cache.
+	 *
+	 * @param string $relative Path under the plugin root.
+	 * @return string
+	 */
+	private static function asset_version( $relative ) {
+		$path  = WW_PLUGIN_DIR . ltrim( $relative, '/' );
+		$mtime = file_exists( $path ) ? filemtime( $path ) : false;
+		return $mtime ? (string) $mtime : WW_VERSION;
+	}
+}
