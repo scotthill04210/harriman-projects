@@ -103,7 +103,87 @@ function ww_title_abbreviations() {
  */
 function ww_meta( $key, $post_id = 0 ) {
 	$post_id = $post_id ? (int) $post_id : (int) get_the_ID();
-	return get_post_meta( $post_id, '_ww_' . $key, true );
+	$all     = ww_meta_cache( $post_id );
+	$meta_key = '_ww_' . $key;
+	if ( ! isset( $all[ $meta_key ][0] ) ) {
+		return '';
+	}
+	return maybe_unserialize( $all[ $meta_key ][0] );
+}
+
+/**
+ * All meta for one post, loaded once per request.
+ *
+ * @param int $post_id Post ID.
+ * @return array<string,array<int,mixed>>
+ */
+function ww_meta_cache( $post_id ) {
+	static $cache = array();
+	$post_id = (int) $post_id;
+	if ( $post_id <= 0 ) {
+		return array();
+	}
+	if ( ! isset( $cache[ $post_id ] ) ) {
+		$all = get_post_meta( $post_id );
+		$cache[ $post_id ] = is_array( $all ) ? $all : array();
+	}
+	return $cache[ $post_id ];
+}
+
+/**
+ * Load every project image attachment before the template loops over them.
+ *
+ * @param int $post_id Project ID.
+ */
+function ww_prime_project_media( $post_id ) {
+	$ids = array();
+	foreach ( array( 'hero', 'single_image' ) as $key ) {
+		$image = ww_meta( $key, $post_id );
+		if ( is_array( $image ) && ! empty( $image['id'] ) ) {
+			$ids[] = (int) $image['id'];
+		}
+	}
+	foreach ( array( 'slider', 'grid' ) as $key ) {
+		$rows = ww_meta( $key, $post_id );
+		if ( ! is_array( $rows ) ) {
+			continue;
+		}
+		foreach ( $rows as $row ) {
+			if ( is_array( $row ) && ! empty( $row['id'] ) ) {
+				$ids[] = (int) $row['id'];
+			}
+		}
+	}
+	$ids = array_values( array_unique( array_filter( $ids ) ) );
+	if ( $ids ) {
+		_prime_post_caches( $ids, false, true );
+	}
+}
+
+/**
+ * Front-end img tag with srcset. The hero is eager. Every other image is lazy.
+ *
+ * @param int    $attachment_id Attachment ID.
+ * @param string $alt           Alt text.
+ * @param string $role          hero or photo.
+ * @param string $class         Extra class names.
+ * @return string
+ */
+function ww_project_image_html( $attachment_id, $alt, $role, $class = 'ww-project__img' ) {
+	$hero  = ( 'hero' === $role );
+	$attrs = array(
+		'class'    => $class,
+		'alt'      => $alt,
+		'decoding' => 'async',
+		'sizes'    => $hero ? '(min-width: 1512px) 1512px, 100vw' : '(max-width: 899px) 100vw, 720px',
+	);
+	if ( $hero ) {
+		$attrs['loading']       = 'eager';
+		$attrs['fetchpriority'] = 'high';
+	} else {
+		$attrs['loading'] = 'lazy';
+	}
+	return wp_get_attachment_image( (int) $attachment_id, 'large', false, $attrs );
 }
 
 /**
@@ -179,9 +259,9 @@ function ww_heading_tag( $part ) {
  */
 function ww_template_card_images() {
 	$images   = array(
-		1 => WW_PLUGIN_URL . 'assets/img/template-1.svg',
-		2 => WW_PLUGIN_URL . 'assets/img/template-2.svg',
-		3 => WW_PLUGIN_URL . 'assets/img/template-3.svg',
+		1 => WW_PLUGIN_URL . 'assets/img/Template1.svg',
+		2 => WW_PLUGIN_URL . 'assets/img/Template2.svg',
+		3 => WW_PLUGIN_URL . 'assets/img/Template3.svg',
 	);
 	$filtered = apply_filters( 'ww_template_card_images', $images );
 	if ( ! is_array( $filtered ) ) {
@@ -925,6 +1005,14 @@ function ww_clear_related_cache( $post_id ) {
 	update_option( 'ww_related_cache', (string) microtime( true ), false );
 }
 add_action( 'save_post', 'ww_clear_related_cache', 20 );
+add_action( 'deleted_post', 'ww_clear_related_cache', 20 );
+add_action(
+	'set_object_terms',
+	static function ( $object_id ) {
+		ww_clear_related_cache( (int) $object_id );
+	},
+	20
+);
 
 /**
  * Up to three related project IDs, cached for about 12 hours.
@@ -1010,8 +1098,12 @@ function ww_query_related_ids( $post_id ) {
 	remove_filter( 'posts_clauses', $filter, 10 );
 
 	$found = array();
-	foreach ( (array) $query->posts as $id ) {
-		$id = (int) $id;
+	$ids   = array_values( array_filter( array_map( 'intval', (array) $query->posts ) ) );
+	if ( $ids ) {
+		_prime_post_caches( $ids, false, true );
+		update_post_thumbnail_cache( $query );
+	}
+	foreach ( $ids as $id ) {
 		if ( $id > 0 && ww_project_card_image_id( $id ) ) {
 			$found[] = $id;
 		}
@@ -1044,8 +1136,11 @@ function ww_related_card_html( $post_id ) {
 		'large',
 		false,
 		array(
-			'class' => 'wp-post-image',
-			'alt'   => $alt,
+			'class'    => 'wp-post-image',
+			'alt'      => $alt,
+			'loading'  => 'lazy',
+			'decoding' => 'async',
+			'sizes'    => '(max-width: 899px) 100vw, 480px',
 		)
 	);
 	if ( ! $img ) {

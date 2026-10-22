@@ -17,7 +17,7 @@ class PostType {
 	public static function register_hooks() {
 		add_action( 'init', array( __CLASS__, 'register' ), 9 );
 		add_action( 'init', array( __CLASS__, 'attach_taxonomies' ), 11 );
-		add_action( 'init', array( __CLASS__, 'maybe_flush' ), 99 );
+		add_action( 'admin_init', array( __CLASS__, 'maybe_flush' ) );
 	}
 
 	/**

@@ -27,6 +27,7 @@ class Render {
 	 * Hooks.
 	 */
 	public static function register() {
+		add_filter( 'the_content', array( __CLASS__, 'skip_legacy_blocks' ), 0 );
 		add_filter( 'the_content', array( __CLASS__, 'content' ), 99 );
 		add_filter( 'body_class', array( __CLASS__, 'body_class' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue' ), 20 );
@@ -38,27 +39,50 @@ class Render {
 	 * @param string $content Original content.
 	 * @return string
 	 */
-	public static function content( $content ) {
+	/**
+	 * The saved block layout is replaced below. Skip parsing it on the way there.
+	 *
+	 * @param string $content Original content.
+	 * @return string
+	 */
+	public static function skip_legacy_blocks( $content ) {
+		if ( self::replaces_content() ) {
+			remove_filter( 'the_content', 'do_blocks', 9 );
+		}
+		return $content;
+	}
+
+	/**
+	 * Whether this request renders a flagged project template.
+	 *
+	 * @return bool
+	 */
+	private static function replaces_content() {
 		if ( self::$rendering || is_admin() ) {
-			return $content;
+			return false;
 		}
 		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
-			return $content;
+			return false;
 		}
 		if ( doing_filter( 'get_the_excerpt' ) || doing_filter( 'the_excerpt' ) ) {
-			return $content;
+			return false;
 		}
 		if ( ! is_singular( WW_POST_TYPE ) || ! in_the_loop() || ! is_main_query() ) {
-			return $content;
+			return false;
 		}
 		if ( post_password_required() ) {
+			return false;
+		}
+		return (bool) ww_uses_new_template( get_the_ID() );
+	}
+
+	public static function content( $content ) {
+		if ( ! self::replaces_content() ) {
 			return $content;
 		}
 		$post_id = get_the_ID();
-		if ( ! ww_uses_new_template( $post_id ) ) {
-			return $content;
-		}
 
+		ww_prime_project_media( $post_id );
 		$template = ww_active_template( $post_id );
 		self::$rendering = true;
 		ob_start();
@@ -70,6 +94,7 @@ class Render {
 		}
 		$html = ob_get_clean();
 		self::$rendering = false;
+		add_filter( 'the_content', 'do_blocks', 9 );
 
 		return is_string( $html ) ? $html : '';
 	}
@@ -114,19 +139,30 @@ class Render {
 		if ( ! $template ) {
 			return;
 		}
-		wp_enqueue_style(
-			'ww-template-' . $template,
-			WW_PLUGIN_URL . 'assets/css/ww-template-' . $template . '.css',
-			array( 'ww-project-base' ),
-			self::asset_version( 'assets/css/ww-template-' . $template . '.css' )
-		);
-		wp_enqueue_script(
-			'ww-template-' . $template,
-			WW_PLUGIN_URL . 'assets/js/ww-template-' . $template . '.js',
-			array(),
-			self::asset_version( 'assets/js/ww-template-' . $template . '.js' ),
-			true
-		);
+		$css_relative = 'assets/css/ww-template-' . $template . '.css';
+		$css_path     = WW_PLUGIN_DIR . $css_relative;
+		$css_body     = is_readable( $css_path ) ? (string) file_get_contents( $css_path ) : '';
+		if ( false !== strpos( $css_body, '{' ) ) {
+			wp_enqueue_style(
+				'ww-template-' . $template,
+				WW_PLUGIN_URL . $css_relative,
+				array( 'ww-project-base' ),
+				self::asset_version( $css_relative )
+			);
+		}
+		$js_relative = 'assets/js/ww-template-' . $template . '.js';
+		if ( is_readable( WW_PLUGIN_DIR . $js_relative ) ) {
+			wp_enqueue_script(
+				'ww-template-' . $template,
+				WW_PLUGIN_URL . $js_relative,
+				array(),
+				self::asset_version( $js_relative ),
+				array(
+					'in_footer' => true,
+					'strategy'  => 'defer',
+				)
+			);
+		}
 	}
 
 	/**
